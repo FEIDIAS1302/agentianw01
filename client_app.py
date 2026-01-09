@@ -1,5 +1,5 @@
 import streamlit as st
-import google.generativeai as genai
+from openai import OpenAI
 import json
 import re
 import zipfile
@@ -183,33 +183,43 @@ def extract_text(file):
     except: pass
     return text
 
-# --- 修正版: カッコ (text): を忘れずにつける ---
+# --- OpenAIを使った台本生成関数 ---
 def generate_script(text):
     # テキストが空っぽだった場合のガード
     if not text or len(text) < 10:
-        return "エラー: PDFから文字を読み取れませんでした。テキストが含まれるPDFを使用してください。"
+        return "エラー: 資料から文字を読み取れませんでした。"
 
     try:
-        # モデル名を安定版の 'gemini-1.5-flash' に指定
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # 1. クライアントの準備
+        # ※Streamlit CloudのSecretsを使う場合
+        # client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
         
-        prompt = f"""
-        あなたはプロの構成作家です。以下の資料を元に、企業の魅力が伝わる1分程度の動画台本を作成してください。
+        # ※直接キーを書く場合 (テスト用)
+        client = OpenAI(api_key="sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx") 
+
+        # 2. 生成実行 (gpt-4o-mini は安くて高性能です)
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "あなたはプロの動画構成作家です。"},
+                {"role": "user", "content": f"""
+                以下の資料を元に、企業の魅力が伝わる1分程度の動画台本を作成してください。
+                
+                【条件】
+                - 読み上げ時間は約1分（文字数300〜400文字程度）
+                - 丁寧すぎず、親しみやすい語り口で
+                - 構成：導入（課題提起）→解決策（自社サービス）→実績・信頼性→結び
+                
+                【資料テキスト】
+                {text[:15000]} 
+                """}
+            ]
+        )
         
-        【条件】
-        - 読み上げ時間は約1分（文字数300〜400文字程度）
-        - 丁寧すぎず、親しみやすい語り口で
-        - 構成：導入（課題提起）→解決策（自社サービス）→実績・信頼性→結び
-        
-        【資料テキスト】
-        {text[:30000]} 
-        """
-        
-        response = model.generate_content(prompt)
-        return response.text
+        return response.choices[0].message.content
         
     except Exception as e:
-        return f"AI生成エラー: {str(e)}\n(requirements.txtの更新と、Reboot appを試してください)"
+        return f"OpenAI生成エラー: {str(e)}"
 
 # --- メインレイアウト ---
 
