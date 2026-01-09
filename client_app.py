@@ -183,13 +183,7 @@ def extract_text(file):
     except: pass
     return text
 
-def generate_script(text):
-    # ... (省略) ...
-    try:
-        # モデル名を 'gemini-1.5-flash' (または 'gemini-1.5-flash-latest') に固定
-        model = genai.GenerativeModel('gemini-1.5-flash')
-    prompt = f"会社説明動画の台本を作成してください。1500文字程度。内容は以下の通り:\n{text[:30000]}"
-    return model.generate_content(prompt).text
+def generate_script
 
 # --- メインレイアウト ---
 
