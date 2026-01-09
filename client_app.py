@@ -6,8 +6,6 @@ import zipfile
 import io
 import datetime
 import requests
-import webbrowser
-import os
 from PIL import Image, ImageOps
 from PyPDF2 import PdfReader
 from pptx import Presentation
@@ -74,7 +72,8 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- 設定 ---
-genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+genai.configure(api_key=st.secrets["OPENAI_API_KEY"])
+client = OpenAI(api_key=api_key)
 
 # --- データ定義 (プレースホルダー) ---
 # ※本番では assets/bg_01.jpg などのパスを指定してください
