@@ -183,7 +183,33 @@ def extract_text(file):
     except: pass
     return text
 
-def generate_script
+# --- 修正版: カッコ (text): を忘れずにつける ---
+def generate_script(text):
+    # テキストが空っぽだった場合のガード
+    if not text or len(text) < 10:
+        return "エラー: PDFから文字を読み取れませんでした。テキストが含まれるPDFを使用してください。"
+
+    try:
+        # モデル名を安定版の 'gemini-1.5-flash' に指定
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        
+        prompt = f"""
+        あなたはプロの構成作家です。以下の資料を元に、企業の魅力が伝わる1分程度の動画台本を作成してください。
+        
+        【条件】
+        - 読み上げ時間は約1分（文字数300〜400文字程度）
+        - 丁寧すぎず、親しみやすい語り口で
+        - 構成：導入（課題提起）→解決策（自社サービス）→実績・信頼性→結び
+        
+        【資料テキスト】
+        {text[:30000]} 
+        """
+        
+        response = model.generate_content(prompt)
+        return response.text
+        
+    except Exception as e:
+        return f"AI生成エラー: {str(e)}\n(requirements.txtの更新と、Reboot appを試してください)"
 
 # --- メインレイアウト ---
 
