@@ -72,7 +72,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- 設定 ---
-genai.configure(api_key=st.secrets["OPENAI_API_KEY"])
+api_key = st.secrets["OPENAI_API_KEY"]
 client = OpenAI(api_key=api_key)
 
 # --- データ定義 (プレースホルダー) ---
