@@ -6,12 +6,14 @@ import zipfile
 import io
 import datetime
 import requests
+import webbrowser
+import os
 from PIL import Image, ImageOps
 from PyPDF2 import PdfReader
 from pptx import Presentation
 
-# --- デザイン設定 (Studio.design風カスタムCSS) ---
-st.set_page_config(page_title="NuWorks Studio", layout="wide", page_icon="◾️")
+# --- デザイン設定  ---
+st.set_page_config(page_title="AGENTIA for NUWORKS", layout="wide", page_icon="◾️")
 
 # CSS注入: ミニマル・モノトーン・高品質なUI
 st.markdown("""
@@ -77,20 +79,20 @@ genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 # --- データ定義 (プレースホルダー) ---
 # ※本番では assets/bg_01.jpg などのパスを指定してください
 BACKGROUNDS = {
-    "bg_01": {"name": "Modern Office", "url": "assets/bg_01.jpg"},
-    "bg_02": {"name": "Creative Studio", "url": "assets/bg_02.jpg"},
-    "bg_03": {"name": "Tech Lab", "url": "assets/bg_03.jpg"},
-    "bg_04": {"name": "Minimal White", "url": "assets/bg_04.jpg"},
+    "bg_01": {"name": "Blue abstarct", "url": "assets/bg_01.jpg"},
+    "bg_02": {"name": "White marble", "url": "assets/bg_02.jpg"},
+    "bg_03": {"name": "Rooms", "url": "assets/bg_03.jpg"},
+    "bg_04": {"name": "Tech", "url": "assets/bg_04.jpg"},
 }
 
 # アバター画像 (縦長 9:16 の透過PNGを想定)
 AVATARS = {
     # サイズを 300x400 から 270x480 に変更
     # ※ここには実際の透過PNGのパスを指定することになります
-    "avatar_a": {"name": "Sarah (Suit)", "url": "assets/avat_01.png"},
-    "avatar_b": {"name": "Mike (Casual)", "url": "assets/avat_02.png"},
-    "avatar_c": {"name": "Emma (Creative)", "url": "assets/avat_03.png"},
-    "avatar_d": {"name": "Ken (Executive)", "url": "assets/avat_04.png"},
+    "avatar_a": {"name": "Avatar01", "url": "assets/avat_01.png"},
+    "avatar_b": {"name": "Avatar02", "url": "assets/avat_02.png"},
+    "avatar_c": {"name": "Avatar03", "url": "assets/avat_03.png"},
+    "avatar_d": {"name": "Avatar04", "url": "assets/avat_04.png"},
 }
 
 BGMS = {
@@ -106,12 +108,12 @@ BGMS = {
         "path": "assets/bgm2.mp3"
     },
     "bgm_03": {
-        "name": "Calm Piano", 
-        "desc": "落ち着いたピアノソロ",
+        "name": "Morning", 
+        "desc": "落ち着いた楽曲",
         "path": "assets/bgm3.mp3"
     },
     "bgm_04": {
-        "name": "Future Bass", 
+        "name": "Future", 
         "desc": "エネルギッシュなBGM",
         "path": "assets/bgm4.mp3"
     },
@@ -204,11 +206,40 @@ with col_input:
 
     st.markdown("### 3. Visual Style")
     
-    # 背景選択
+    # --- 背景選択 (サムネイル付き) ---
     st.caption("Select Background")
-    bg_keys = list(BACKGROUNDS.keys())
-    bg_choice = st.selectbox("Background", bg_keys, format_func=lambda x: BACKGROUNDS[x]['name'], label_visibility="collapsed")
     
+    # 辞書のキーをリスト化
+    bg_keys = list(BACKGROUNDS.keys())
+    
+    # 4列のカラムを作成
+    bg_cols = st.columns(4)
+    
+    # ループで画像を正方形に加工して表示
+    for i, key in enumerate(bg_keys):
+        with bg_cols[i]:
+            # 画像を読み込む
+            img = load_image_from_url_or_path(BACKGROUNDS[key]['url'])
+            
+            # 【重要】正方形にセンタークロップ（真ん中を切り抜き）
+            # 短い方の辺に合わせて正方形を作る計算
+            min_side = min(img.width, img.height)
+            # ImageOps.fit は自動で「いい感じ」に真ん中を切り抜いてくれます
+            square_img = ImageOps.fit(img, (min_side, min_side), centering=(0.5, 0.5))
+            
+            # 表示
+            st.image(square_img, use_column_width=True)
+            st.caption(BACKGROUNDS[key]['name'])
+
+    # ラジオボタンで選択させる（画像の下に配置）
+    bg_choice = st.radio(
+        "Choose Background", 
+        bg_keys, 
+        format_func=lambda x: BACKGROUNDS[x]['name'], 
+        horizontal=True,
+        label_visibility="collapsed" # ラベルを隠してすっきりさせる
+    )
+
     # アバター選択 (ビジュアルグリッド)
     st.caption("Select Avatar")
     
@@ -290,6 +321,72 @@ with col_preview:
         st.markdown("### Generated Script")
         final_script = st.text_area("", st.session_state['result'], height=300)
         
-        # ダウンロードボタン等のロジックはここに配置
-        # (前回と同じZIP作成ロジックを入れてください)
-        st.download_button("Download Order Package", "dummy data", "order.zip")
+       # --- ZIP生成関数 ---
+def create_order_zip(order_data, logo_file, doc_file):
+    """メモリ上でZIPファイルを作成する関数"""
+    zip_buffer = io.BytesIO()
+    
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        # 1. JSONファイルを書き込み
+        json_str = json.dumps(order_data, indent=4, ensure_ascii=False)
+        zf.writestr("order.json", json_str)
+        
+        # 2. ロゴ画像を書き込み
+        if logo_file:
+            logo_file.seek(0)
+            # 拡張子を維持
+            ext = logo_file.name.split('.')[-1]
+            zf.writestr(f"logo.{ext}", logo_file.read())
+            
+        # 3. 資料ファイルを書き込み
+        if doc_file:
+            doc_file.seek(0)
+            zf.writestr(doc_file.name, doc_file.read())
+            
+    return zip_buffer.getvalue()
+
+# --- ボタン部分の実装 ---
+
+    # (Generateボタンはそのまま)
+    if st.button("Generate Script & Create Package", type="primary"):
+        if doc_file and company_name and project_id:
+            with st.spinner("Analyzing & Packaging..."):
+                
+                # 1. 台本生成
+                txt = extract_text(doc_file)
+                script = generate_script(txt)
+                st.session_state['result'] = script # プレビュー表示用
+                
+                # 2. データ作成
+                timestamp = datetime.datetime.now().strftime("%Y%m%d")
+                order_data = {
+                    "project_id": project_id,
+                    "company_name": company_name,
+                    "date": timestamp,
+                    "background_id": bg_choice,
+                    "avatar_id": avatar_choice,
+                    "bgm_id": bgm_choice,
+                    "script": script
+                }
+                
+                # 3. ZIPファイルのバイナリデータを作成
+                zip_data = create_order_zip(order_data, logo_file, doc_file)
+                
+                # ZIPをローカルに一時保存
+                zip_filename = f"{project_id}_{company_name}_{timestamp}.zip"
+                with open(zip_filename, "wb") as f:
+                    f.write(zip_data)
+                
+                st.success("📦 ZIP Created!")
+                
+                # --- ここが魔法のコード ---
+                if st.button("🚀 Dropboxへアップロード (画面を開く)"):
+                    # 1. あなたのDropboxファイルリクエストのURL
+                    dropbox_url = "https://www.dropbox.com/request/hxd6z70hxhV1fTG4rmVw"
+                    
+                    # 2. ブラウザでDropboxを開く
+                    webbrowser.open(dropbox_url)
+                    
+                    # 3. エクスプローラーでZIPがある場所を開く (Windows用)
+                    # ファイルを選択した状態でフォルダを開きます
+                    subprocess.Popen(f'explorer /select,"{os.path.abspath(zip_filename)}"')
