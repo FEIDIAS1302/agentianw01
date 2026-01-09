@@ -13,6 +13,27 @@ from pptx import Presentation
 # --- デザイン設定  ---
 st.set_page_config(page_title="AGENTIA for NUWORKS", layout="wide", page_icon="◾️")
 
+# --- デバッグ用コード（原因特定用） ---
+import streamlit as st
+
+# Secretsからキーを読み込む
+try:
+    debug_key = st.secrets["OPENAI_API_KEY"]
+    st.write("--- 🔑 キーの読み込みテスト ---")
+    st.write(f"キーの文字数: {len(debug_key)} 文字") # 文字数が合っているか？
+    st.write(f"キーの先頭: {debug_key[:5]}...")       # sk-proj... になっているか？
+    st.write(f"キーの末尾: ...{debug_key[-5:]}")      # 手元のキーと同じか？
+    
+    # 前後に空白が入っていないかチェック
+    if debug_key.strip() != debug_key:
+        st.error("⚠️ キーの前後に余計なスペースが入っています！Secretsを修正してください。")
+    else:
+        st.success("✅ キーの形式は正常です")
+    st.write("-----------------------------")
+except Exception as e:
+    st.error(f"❌ Secretsの読み込みに失敗: {e}")
+# ------------------------------------
+
 # CSS注入: ミニマル・モノトーン・高品質なUI
 st.markdown("""
 <style>
