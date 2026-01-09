@@ -213,7 +213,7 @@ def generate_script(text):
 
 # --- メインレイアウト ---
 
-st.title("NuWorks Studio.")
+st.title("AGENTIA for NUWORKS")
 st.markdown("Create your corporate video in minutes.")
 
 # --- 左カラム: 入力 / 右カラム: プレビュー ---
