@@ -1,6 +1,9 @@
 streamlit
-openai
-PyPDF2
-python-pptx
-Pillow
+numpy
+pyworld
+soundfile
+matplotlib
+scipy
 requests
+streamlit-drawable-canvas
+setuptools
