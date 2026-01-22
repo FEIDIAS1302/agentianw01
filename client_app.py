@@ -309,7 +309,8 @@ with col_preview:
             # ステップ2: Dropboxを開く
             st.link_button(
                 label="2️⃣ Dropboxへアップロード 🚀",
-                url="https://www.dropbox.com/request/DEvU9bqL8ncJP2H0kKzX",
+                url="https://www.dropbox.com/request/H9rPpBopQTC2QStv90EM",
                 type="secondary",
                 use_container_width=True
+
             )
