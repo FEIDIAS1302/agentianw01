@@ -9,17 +9,25 @@ from PIL import Image, ImageOps
 from PyPDF2 import PdfReader
 from pptx import Presentation
 
-# --- デザイン設定  ---
+# --- デザイン設定 ---
 st.set_page_config(page_title="AGENTIA for NUWORKS", layout="wide", page_icon="◾️")
 
 st.markdown("""
 <style>
+    /* 全体のフォントと背景 */
     .stApp { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #ffffff; color: #1a1a1a; }
+    /* ヘッダー周り */
     h1, h2, h3 { font-weight: 700 !important; letter-spacing: -0.05em !important; color: #000000 !important; }
     h1 { font-size: 3rem !important; margin-bottom: 0.5rem !important; }
+    
+    /* 入力フォーム */
     .stTextInput input, .stSelectbox div[data-baseweb="select"] { border-radius: 8px !important; border: 1px solid #e0e0e0 !important; padding: 0.5rem !important; }
+    
+    /* ボタンのスタイル */
     .stButton button { background-color: #000000 !important; color: #ffffff !important; border-radius: 30px !important; font-weight: bold !important; border: none !important; padding: 0.6rem 2rem !important; transition: all 0.3s ease; }
     .stButton button:hover { background-color: #333333 !important; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transform: translateY(-2px); }
+
+    /* 画像スタイル */
     img { border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); background-color: #f5f5f5; object-fit: contain; }
     hr { border-color: #f0f0f0; margin: 3rem 0; }
 </style>
@@ -30,21 +38,21 @@ st.markdown("""
 try:
     api_key = st.secrets["OPENAI_API_KEY"]
 except:
-    api_key = "" # ローカルテストなどでキーがない場合
+    api_key = "" 
 
 # --- データ定義 ---
 BACKGROUNDS = {
-    "bg_01": {"name": "Blue abstarct", "url": "assets/bg_01.jpg"},
-    "bg_02": {"name": "White marble", "url": "assets/bg_02.jpg"},
-    "bg_03": {"name": "Rooms", "url": "assets/bg_03.jpg"},
-    "bg_04": {"name": "Tech", "url": "assets/bg_04.jpg"},
+    "bg_01": {"name": "Blue Abstract", "url": "assets/bg_01.jpg"},
+    "bg_02": {"name": "White Marble", "url": "assets/bg_02.jpg"},
+    "bg_03": {"name": "Modern Office", "url": "assets/bg_03.jpg"},
+    "bg_04": {"name": "Tech Grid", "url": "assets/bg_04.jpg"},
 }
 
 AVATARS = {
-    "avatar_a": {"name": "Avatar01", "url": "assets/avat_01.png"},
-    "avatar_b": {"name": "Avatar02", "url": "assets/avat_02.png"},
-    "avatar_c": {"name": "Avatar03", "url": "assets/avat_03.png"},
-    "avatar_d": {"name": "Avatar04", "url": "assets/avat_04.png"},
+    "avatar_a": {"name": "Avatar 01", "url": "assets/avat_01.png"},
+    "avatar_b": {"name": "Avatar 02", "url": "assets/avat_02.png"},
+    "avatar_c": {"name": "Avatar 03", "url": "assets/avat_03.png"},
+    "avatar_d": {"name": "Avatar 04", "url": "assets/avat_04.png"},
 }
 
 BGMS = {
@@ -65,23 +73,28 @@ def load_image_from_url_or_path(path_or_url):
         else:
             return Image.open(path_or_url).convert("RGBA")
     except:
-        return Image.new("RGBA", (1920, 1080), (200, 200, 200, 255))
+        # 画像がない場合のダミー
+        return Image.new("RGBA", (1920, 1080), (240, 240, 240, 255))
 
 def create_preview(bg_key, avatar_key, logo_upload):
     """プレビュー生成関数"""
+    # 背景
     bg_img = load_image_from_url_or_path(BACKGROUNDS[bg_key]['url'])
     bg_img = bg_img.resize((1920, 1080))
 
+    # アバター
     avatar_img = load_image_from_url_or_path(AVATARS[avatar_key]['url'])
     avatar_ratio = avatar_img.width / avatar_img.height
     new_h = 900
     new_w = int(new_h * avatar_ratio)
     avatar_img = avatar_img.resize((new_w, new_h))
     
+    # アバター配置（中央下）
     x_pos = (1920 - new_w) // 2
     y_pos = 1080 - new_h
     bg_img.paste(avatar_img, (x_pos, y_pos), avatar_img)
 
+    # ロゴ配置（左上）
     if logo_upload:
         logo_img = Image.open(logo_upload).convert("RGBA")
         l_ratio = logo_img.width / logo_img.height
@@ -135,21 +148,20 @@ def generate_script(text):
         return "エラー: 資料から文字を読み取れませんでした。"
 
     try:
-        # ここで毎回クライアントを作り直すことで、Secretsの最新値を確実に反映
+        # Secretsからキーを取得して初期化
         client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "あなたはプロの構成作家です。"},
+                {"role": "system", "content": "あなたはプロの動画構成作家です。"},
                 {"role": "user", "content": f"""
-                以下の資料を元に、企業を説明する文章を考えたいです。企業の魅力が伝わる2分程度のナレーション用の読み上げ原稿を作成してください。
+                以下の資料を元に、企業の魅力が伝わる1分程度の動画台本を作成してください。
                 
                 【条件】
-                - 読み上げ時間は約2分（文字数1500文字程度）
-                - アナウンサーが読み上げる想定の原稿
-                - 営業資料としての動画になるように台本を組み立てる
-                - 「みなさまこんにちは。」など冒頭の挨拶はなし
+                - 読み上げ時間は約1分（文字数300〜400文字程度）
+                - 丁寧すぎず、親しみやすい語り口で
+                - 構成：導入（課題提起）→解決策（自社サービス）→実績・信頼性→結び
                 
                 【資料テキスト】
                 {text[:15000]} 
@@ -167,7 +179,7 @@ st.markdown("Create your corporate video in minutes.")
 
 col_input, col_preview = st.columns([1, 1.2], gap="large")
 
-# === 左カラム：入力 ===
+# === 左カラム：入力エリア ===
 with col_input:
     st.markdown("### 1. Basic Info")
     project_id = st.text_input("Project ID", placeholder="NW10001")
@@ -185,6 +197,7 @@ with col_input:
     for i, key in enumerate(bg_keys):
         with bg_cols[i]:
             img = load_image_from_url_or_path(BACKGROUNDS[key]['url'])
+            # サムネイルを正方形にクロップ
             min_side = min(img.width, img.height)
             square_img = ImageOps.fit(img, (min_side, min_side), centering=(0.5, 0.5))
             st.image(square_img, use_container_width=True)
@@ -206,6 +219,7 @@ with col_input:
     bgm_choice = st.selectbox("Background Music", list(BGMS.keys()), format_func=lambda x: BGMS[x]['name'])
     st.caption(f"♪ {BGMS[bgm_choice]['desc']}")
     
+    # 試聴用プレイヤー
     try:
         st.audio(BGMS[bgm_choice]['path'], format="audio/mp3")
     except:
@@ -216,7 +230,7 @@ with col_input:
     
     st.divider()
     
-    # --- 生成ボタン ---
+    # --- 生成実行ボタン ---
     generate_clicked = st.button("Generate Script & Package", type="primary")
 
     if generate_clicked:
@@ -233,15 +247,16 @@ with col_input:
         else:
             st.error("⚠️ Project ID, Company Name, and Document are required!")
 
-# === 右カラム：プレビューと結果 ===
+# === 右カラム：プレビューと結果エリア ===
 with col_preview:
     st.markdown("### Preview")
     
     with st.container():
-        # リアルタイムプレビュー画像
+        # リアルタイム合成プレビュー
         preview_img = create_preview(bg_choice, avatar_choice, logo_file)
         st.image(preview_img, caption="Composite Preview", use_container_width=True)
         
+        # 設定内容の要約表示
         st.markdown(f"""
         <div style="background-color:#f9f9f9; padding:1.5rem; border-radius:10px; border:1px solid #eee;">
             <p style="margin:0; font-size:0.9rem; color:#888;">CONFIGURATION</p>
@@ -250,16 +265,15 @@ with col_preview:
         </div>
         """, unsafe_allow_html=True)
 
-    # --- 生成後の表示エリア ---
+    # --- 生成完了後の表示 ---
     if st.session_state.get('generation_done'):
         st.divider()
         st.subheader("✅ Generated Result")
         
-        # 生成された台本を表示・編集可能にする
+        # 生成された台本（編集可能）
         final_script = st.text_area("Review Script", st.session_state['generated_script'], height=300)
         
-        # --- ZIP作成とダウンロードボタン ---
-        # 必要なデータを辞書にまとめる
+        # --- ZIP作成処理 ---
         order_data = {
             "project_id": project_id,
             "company_name": company_name,
@@ -267,21 +281,35 @@ with col_preview:
             "background_id": bg_choice,
             "avatar_id": avatar_choice,
             "bgm_id": bgm_choice,
-            "script": final_script  # ユーザーが編集した後の台本を使う
+            "script": final_script  # 編集後の台本を採用
         }
         
-        # ZIPバイナリを作成
+        # ZIPをバイナリとして作成
         zip_bytes = create_order_zip(order_data, logo_file, doc_file)
-        
-        # ダウンロードボタンの表示
         file_name = f"{project_id}_{company_name}_Order.zip"
         
-        st.download_button(
-            label="📥 Download Order Package (.zip)",
-            data=zip_bytes,
-            file_name=file_name,
-            mime="application/zip",
-            type="primary"
-        )
+        st.markdown("### 📥 Download & Submit")
+        st.info("以下の2ステップで納品してください：")
+
+        # 2つのボタンを横並びに配置
+        col_dl, col_dbx = st.columns([1, 1], gap="medium")
         
-        st.info("👆 このZIPファイルをダウンロードして、動画編集アプリ(Video Editor)にアップロードしてください。")
+        with col_dl:
+            # ステップ1: ダウンロード
+            st.download_button(
+                label="1️⃣ ZIPを保存 (Download)",
+                data=zip_bytes,
+                file_name=file_name,
+                mime="application/zip",
+                type="primary",
+                use_container_width=True
+            )
+            
+        with col_dbx:
+            # ステップ2: Dropboxを開く
+            st.link_button(
+                label="2️⃣ Dropboxへアップロード 🚀",
+                url="https://www.dropbox.com/request/DEvU9bqL8ncJP2H0kKzX",
+                type="secondary",
+                use_container_width=True
+            )
